@@ -19,13 +19,14 @@ inputs:
 runs:
   using: "composite"
   steps:
-      - uses: actions/checkout@v2
       - name: Install OpenVPN
+        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get --assume-yes --no-install-recommends install openvpn          
 
       - name: Setup VPN config
+        shell: bash
         run: |
           mkdir tmp
           echo "${{ inputs.openvpn-config }}" > ./tmp/config.ovpn
@@ -34,11 +35,14 @@ runs:
           echo "${{ inputs.buildkit-cert-key }}" > ./tmp/key.pem
 
       - name: Connect VPN
+        shell: bash
         run: sudo openvpn --config "./tmp/config.ovpn" --daemon
 
       - name: Wait for a VPN connection
+        shell: bash
         run: until nc -vzw 2 ${{ inputs.buildkit-ip }} 8082; do sleep 1; done
 
       - name: Setup
+        shell: bash
         run: docker buildx create --name remote-buildkit-host --driver-opt cacert=${PWD}/tmp/ca.pem,cert=${PWD}/tmp/cert.pem,key=${PWD}/tmp/key.pem,servername=127.0.0.1 --driver remote tcp://${{ inputs.buildkit-ip }}:8082
 
