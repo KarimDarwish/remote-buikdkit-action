@@ -53,5 +53,5 @@ runs:
 
       - name: Setup
         shell: bash
-        run: docker buildx create --name ${{ inputs.builder-name } --driver-opt cacert=${PWD}/tmp/ca.pem,cert=${PWD}/tmp/cert.pem,key=${PWD}/tmp/key.pem,servername=127.0.0.1 --driver remote tcp://${{ inputs.buildkit-ip }}:8082
+        run: docker buildx create --name ${{ inputs.builder-name }} --driver-opt cacert=${PWD}/tmp/ca.pem,cert=${PWD}/tmp/cert.pem,key=${PWD}/tmp/key.pem,servername=127.0.0.1 --driver remote tcp://${{ inputs.buildkit-ip }}:8082
 
