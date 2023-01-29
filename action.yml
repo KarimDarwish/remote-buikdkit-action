@@ -1,0 +1,44 @@
+name: 'Configure Buildkit'
+description: 'Configures the remote buildkit host using given credentials'
+inputs:
+  openvpn-config:  # id of input
+    description: 'Content of an .ovpn configuration containing certificate to connect'
+    required: true
+  buildkit-ca-cert:
+    description: 'CA Certificate configured with Buildkit'
+    required: true
+  buildkit-cert:
+    description: 'Client certificate configured with Buildkit'
+    required: true
+  buildkit-cert-key:
+    description: 'Private key for the client certificate configured with Buildkit'
+    required: true
+  buildkit-ip:
+    description: 'Private IP address of the Buildkit daemon'
+    required: true
+runs:
+  using: "composite"
+  steps:
+      - uses: actions/checkout@v2
+      - name: Install OpenVPN
+        run: |
+          sudo apt-get update
+          sudo apt-get --assume-yes --no-install-recommends install openvpn          
+
+      - name: Setup VPN config
+        run: |
+          mkdir tmp
+          echo "${{ inputs.openvpn-config }}" > ./tmp/config.ovpn
+          echo "${{ inputs.buildkit-ca-cert }}" > ./tmp/ca.pem
+          echo "${{ inputs.buildkit-cert }}" > ./tmp/cert.pem
+          echo "${{ inputs.buildkit-cert-key }}" > ./tmp/key.pem
+
+      - name: Connect VPN
+        run: sudo openvpn --config "./tmp/config.ovpn" --daemon
+
+      - name: Wait for a VPN connection
+        run: until nc -vzw 2 ${{ inputs.buildkit-ip }} 8082; do sleep 1; done
+
+      - name: Setup
+        run: docker buildx create --name remote-buildkit-host --driver-opt cacert=${PWD}/tmp/ca.pem,cert=${PWD}/tmp/cert.pem,key=${PWD}/tmp/key.pem,servername=127.0.0.1 --driver remote tcp://${{ inputs.buildkit-ip }}:8082
+
