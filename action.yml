@@ -20,6 +20,10 @@ inputs:
     description: 'Name of the Docker buildx builder'
     required: false
     default: 'remote-buildkit-host'
+  wait-for-vpn-sleep:
+    description: 'How long to sleep to wait for the VPN connection. In seconds'
+    required: false
+    default: '10s'
 
 runs:
   using: "composite"
@@ -43,11 +47,11 @@ runs:
         shell: bash
         run: sudo openvpn --config "./tmp/config.ovpn" --daemon
 
-      - name: Wait for a VPN connection
+      - name: Waiting for a VPN connection
         shell: bash
-        run: until nc -vzw 2 ${{ inputs.buildkit-ip }} 8082; do sleep 1; done
+        run: sleep ${{ inputs.wait-for-vpn-sleep }}
 
-      - name: Setup
+      - name: Setup Docker Builder
         shell: bash
         run: docker buildx create --name ${{ inputs.builder-name }} --driver-opt cacert=${PWD}/tmp/ca.pem,cert=${PWD}/tmp/cert.pem,key=${PWD}/tmp/key.pem,servername=127.0.0.1 --driver remote tcp://${{ inputs.buildkit-ip }}:8082
 
