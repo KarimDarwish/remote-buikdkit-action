@@ -19,19 +19,18 @@ inputs:
   builder-name:
     description: 'Name of the Docker buildx builder'
     required: false
-    default: 'remote-buildkit-host'
-  wait-for-vpn-sleep:
-    description: 'How long to sleep to wait for the VPN connection. In seconds'
+    default: 'buildkit-host-aws'
+  openvpn-version:
     required: false
-    default: '10s'
+    default: '2.5.5-1ubuntu3.1'
 
 runs:
   using: "composite"
   steps:
-      - name: Install OpenVPN
-        shell: bash
-        run: |
-          sudo apt-get --assume-yes --no-install-recommends install openvpn          
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: openvpn
+          version: ${{ inputs.openvpn-version }}
 
       - name: Setup VPN config
         shell: bash
@@ -48,9 +47,8 @@ runs:
 
       - name: Waiting for a VPN connection
         shell: bash
-        run: sleep ${{ inputs.wait-for-vpn-sleep }}
+        run: until ping -c1 -W 1 ${{ inputs.buildkit-ip }} >/dev/null 2>&1; do :; done
 
       - name: Setup Docker Builder
         shell: bash
         run: docker buildx create --name ${{ inputs.builder-name }} --driver-opt cacert=${PWD}/tmp/ca.pem,cert=${PWD}/tmp/cert.pem,key=${PWD}/tmp/key.pem,servername=127.0.0.1 --driver remote tcp://${{ inputs.buildkit-ip }}:8082
-
